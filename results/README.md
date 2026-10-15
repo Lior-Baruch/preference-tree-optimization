@@ -1,7 +1,11 @@
 # Results
 
-The numbers behind the main README: two PTO runs that differ only in look-ahead depth
-(K = 0 and K = 5), each trained for 10 iterations and evaluated by two LLM judges.
+The numbers behind the main README. Most of this page covers generation 3, the runs produced by
+the code in this repository: two PTO runs that differ only in look-ahead depth (K = 0 and K = 5),
+each trained for 10 iterations and evaluated by two LLM judges. Generation 2 (three reward
+oracles) is documented in [Earlier generations](#earlier-generations). Generation 1 is the
+published paper ([arXiv 2608.12062](https://arxiv.org/abs/2608.12062)); its results are reported
+there and are not re-analysed here.
 
 ## Setup
 
@@ -48,7 +52,8 @@ source tables, so a p-value of `0.000` means p < 0.0005.
 
 ## Files
 
-All CSVs in [`data/`](data/) were parsed programmatically from the tracked result tables of the
+The generation-3 CSVs in [`data/`](data/) (every file without a `gen2_` prefix) were
+parsed programmatically from the tracked result tables of the
 thesis analysis (repository commit `1daedb5`, results directory `eda/results/`), keeping only
 the PTO rows; no number was typed by hand. Source paths below are relative to that directory.
 Arm labels `PTO_LA0` / `PTO_LA5` in the sources are `k = 0` / `k = 5` here.
@@ -136,11 +141,143 @@ afterwards by the evaluation judges are not included.
 
 Source: `compute/cost/tables/api_ratio.md`.
 
+## Earlier generations
+
+PTO was developed over three generations of experiments. The code in this repository implements
+generation 3 only.
+
+- **Generation 1** is the published paper
+  ([arXiv 2608.12062](https://arxiv.org/abs/2608.12062)): Llama-2-7B, GPT-3.5 patient and judge,
+  K = 0 vs K = 5. Its results are reported in the paper and are not re-analysed here.
+- **Generation 2** (three reward oracles) was run with earlier research code in the thesis
+  repository. Its raw outputs are kept in the thesis working copy (paths are given under each
+  file below), but the data folders are not under version control.
+
+The `gen2_*` CSVs were **recomputed from the raw per-conversation score files**. They were not
+copied from the thesis notebooks' summary tables. The recomputation was checked against two
+independent re-analyses. Means agree to floating-point precision, and paired statistics agree to
+within 1e-5.
+
+> **Do not compare absolute scores across generations.** Each generation has a different
+> therapist model, patient simulator, judge and questionnaire prompts. The generation-2
+> therapist is a 4-bit model that falls into phrase-repetition loops even before training (see
+> `gen2_degeneration.csv`). Compare arms and iterations *within* a generation only.
+
+Conventions:
+
+- **Personas.** The same 96 patient personas are used in a deterministic order, so file index *i*
+  is the same persona in every model state. This was verified from the conversation text (name,
+  age and problem). All contrasts are paired by persona.
+- **Iterations.** Iteration 0 is the untrained base model, and iteration *n* is the policy after
+  *n* DPO updates. Each published model state has one conversation per persona, scored once by
+  the judge (one state was partly regenerated in a technical re-run before scoring; see
+  iteration 6 below).
+- **Selection bias.** Checkpoints were compared and reported on the same 96 conversations, and
+  there is no held-out persona set. A "best iteration" is therefore optimistic. Prefer final
+  iterations or averages over checkpoints.
+- **Number format.** Values are rounded to 4 decimals and p-values to 3 significant digits.
+  `d_z` is the mean paired difference divided by its standard deviation.
+
+### Generation 2: three reward oracles
+
+| | |
+|---|---|
+| Policy | `meta-llama/Llama-3.2-1B` (base model), 4-bit NF4 with bf16 compute, LoRA r = 16, DPO β = 0.1, 3 epochs per iteration |
+| Patient simulator and judge | `gpt-4o-mini-2024-07-18` (evaluation judge T = 0.1, seed 42) |
+| Training oracles | Q1+Q2, WAI-SR, CSQ-8, each with K = 0 and K = 5; a fourth, non-therapeutic style-control oracle (K = 0 only) |
+| Tree | 2 candidates per therapist turn, tree temperature 1.2, τ = 0.1 |
+| Iterations scored | 1–5 for every arm, and 6–10 for the Q1+Q2-reward K = 5 arm |
+| Instruments | Q1+Q2, Q1, Q2, WAI-SR, CSQ-8 (1–4), MI-SAT, MITI, scored with the thesis' JSON-schema questionnaire prompts |
+
+State names: `L0_` / `L5_` is K = 0 / K = 5, then the training oracle, then `V<n>` for
+iteration *n*. Source paths below are relative to the generation-2 experiment folder of the
+thesis working copy. All values were recomputed from `eda/eval/<instrument>/<state>/<i>.csv`.
+
+**Coverage.** 36 states were scored (the base plus 35 PTO states), each with n = 96 on all six
+questionnaires (seven instruments counting the Q1+Q2 composite).
+
+- The style-control oracle's conversations were generated but never scored, so it has no
+  evaluation results. Its training-side numbers appear only in `gen2_train_reward.csv` and
+  `gen2_degeneration.csv`.
+- Iteration 6 of the Q1+Q2-reward and WAI-SR K = 0 arms was generated but not scored.
+
+**Training oracles vs evaluation instruments.** A training oracle and the evaluation instrument
+of the same name are not identical prompts. The Q1+Q2 trees were scored at T = 0.2 with an
+older parser, and K = 5 tree rewards score truncated look-ahead rollouts, not full sessions.
+Compare tree rewards within an oracle only.
+
+#### `gen2_by_state.csv`
+
+Long format: `state`, `oracle`, `K`, `iteration`, `instrument`, `n`, `mean`, `sd`, `se`. Q1+Q2
+is computed per conversation as (Q1 + Q2) / 2.
+
+#### `gen2_vs_base.csv`
+
+Every scored state compared with the base, on every instrument (persona-paired).
+
+| Column | Meaning |
+|---|---|
+| `is_final` | the arm's last scored iteration (5, or 10 for the Q1+Q2-reward K = 5 arm) |
+| `own_instrument` | `True` on the instrument the arm was trained on |
+| `base_mean`, `model_mean`, `delta`, `se_delta`, `d_z` | model − base |
+| `p_wilcoxon`, `p_holm_7` | Wilcoxon signed-rank; Holm across the 7 instruments within a state |
+
+The Q1+Q2-reward K = 5 arm has twice as many iterations as the other arms. For a matched
+comparison, use the `iteration == 5` rows. CSQ-8 is on a 1–4 scale, so compare instruments by
+`d_z`, not by raw `delta`.
+
+#### `gen2_k5_vs_k0.csv`
+
+K = 5 − K = 0 for each oracle. Rows with `scope = matched_iteration` compare the same iteration
+(1–5); `p_holm` corrects across the 15 oracle × iteration contrasts within an instrument. Rows
+with `scope = pooled_V1_V5` compare per-persona means over iterations 1–5; `p_holm` corrects
+across the 7 instruments within an oracle.
+
+#### `gen2_train_reward.csv`
+
+Training-side statistics of each preference tree. `tree_version` *n* is generated by the policy
+after `policy_iteration` = *n* − 1 updates.
+
+| Column | Meaning |
+|---|---|
+| `n_pairs` | rows (branch points) in the tree files |
+| `mean_branch_reward`, `mean_winner_reward` | the oracle's mean score of both candidates, and of the winner |
+| `n_pairs_pass_tau` | pairs with winner ≥ loser + 0.1 (the DPO training set before the 1% validation split) |
+| `share_tied_pairs` | share of branch points where both candidates got the same score |
+
+Source: `data/conversation_trees/<oracle>/LookAhead_<K>/…/pref_data_<i>.csv`.
+
+#### `gen2_degeneration.csv`
+
+Phrase-repetition loops in therapist turns. A turn is degenerate when some lower-cased
+word/punctuation 5-gram occurs at least 8 times within it. The scripted opening line is
+excluded. Columns: `n_therapist_turns`, `n_degenerate_turns`, `share_degenerate_turns`, and
+`share_conversations_any_degenerate`; `scored` marks states with evaluation scores.
+
+For the base model, 135 of 1,427 therapist turns (9.5%) are degenerate. This is a text
+heuristic, and its threshold was calibrated so that the base-model rate matches the roughly 9.5%
+recorded in the thesis notes.
+
+**Re-run evaluations.** Two evaluation folders of the Q1+Q2-reward K = 5 arm have an earlier
+copy (`…_V6_OLD`, `…_V10_OLD` under `data/conversations_eval/Q1Q2/LookAhead_5/`). Both
+copies were scored by the training-time scorer, but only the published folders were scored on
+the seven instruments above.
+
+- **Iteration 6** (`L5_Q1Q2_V6`) was partly regenerated in a technical re-run: 71 of the 96
+  conversations are byte-identical to the earlier copy, and the other 25 were regenerated before
+  scoring. This state appears in `gen2_by_state.csv`, `gen2_vs_base.csv` and the history figure
+  (marked †), but no number in the main README or in this page's text uses it.
+- **Iteration 10** (`L5_Q1Q2_V10`): the earlier copy is an incomplete run of 86 conversations, all
+  byte-identical to the published folder. The 10 personas it lacks score low in the published
+  folder (Q1+Q2 1.977 vs 3.083 on the other 86), so completing the run did not inflate the
+  iteration-10 headline (2.968).
+
 ## Figures
 
 | File | Produced by |
 |---|---|
 | [`figures/results_light.png`](figures/results_light.png), [`figures/results_dark.png`](figures/results_dark.png) | `python scripts/make_results_figure.py` (reads `data/`) |
+| [`figures/history_light.png`](figures/history_light.png), [`figures/history_dark.png`](figures/history_dark.png) | `python scripts/make_history_figure.py` (reads `data/gen2_by_state.csv`, `data/k_contrast_by_iteration.csv`) |
 | [`figures/pto_framework.png`](figures/pto_framework.png), [`figures/pto_preference_tree.png`](figures/pto_preference_tree.png) | `python scripts/make_schematics.py` (no data) |
 
-Both scripts need only pandas and matplotlib.
+All three scripts need only pandas and matplotlib.

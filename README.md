@@ -15,8 +15,8 @@ patient. At each turn the policy proposes several replies, optionally rolls each
 turns (**look-ahead**), an LLM oracle scores the resulting conversations, and the best and worst
 replies become a DPO preference pair. Repeating this every iteration lets the model improve
 without human labels. This repository is a clean, tested implementation of the method from our
-ICLR 2025 SSI-FM workshop paper, developed as part of Lior Baruch's M.Sc. thesis at Reichman
-University.
+ICLR 2025 SSI-FM workshop paper ([arXiv 2608.12062](https://arxiv.org/abs/2608.12062)),
+developed as part of Lior Baruch's M.Sc. thesis at Reichman University.
 
 ![PTO framework: one training iteration](results/figures/pto_framework.png)
 
@@ -65,12 +65,54 @@ run per configuration. Scores are means over the 96 personas; iteration 0 is the
   look-ahead dampens it but does not remove it.
 - **Cost.** Look-ahead is not free: 8.1 vs 19.7 GPU-hours for 10 iterations on a Colab A100
   (2.4×), and 117,209 vs 301,440 API calls (2.6×).
-- **Original paper** (Llama-2-7B therapist, GPT-3.5 patient and oracle, 7 iterations; a different
-  scale, not comparable to the numbers above): Q1+Q2 rose from 3.453 (base) to 3.777 (best K=0)
-  and 3.982 (best K=5).
 
 All numbers come from the CSVs in [`results/`](results/README.md), which documents each table,
 the judges and the statistics.
+
+## Earlier experiments
+
+The results above are the third generation of PTO experiments, and the code in this repository
+is the generation-3 implementation. Generation 1 is the published paper; its results are
+reported there. Generation 2 was run with earlier research code, and its numbers were recomputed
+here from the raw per-conversation score files. Each generation uses a different therapist
+model, patient simulator and judge, so **absolute scores are not comparable across
+generations**: compare K = 0 with K = 5, or a model with its own base, within one generation
+only.
+
+| Generation | Setup | Compared | Q1+Q2 (1–5): base → trained |
+|---|---|---|---|
+| **1 · the paper** (ICLR 2025 SSI-FM) | Llama-2-7B 4-bit; GPT-3.5 patient and judge; 2 candidates/turn; 7 iterations | K = 0 vs K = 5 | reported in the [paper](https://arxiv.org/abs/2608.12062) |
+| **2 · reward oracles** | Llama-3.2-1B 4-bit; gpt-4o-mini; 2 candidates/turn; 5 iterations (10 for one arm) | Q1+Q2 vs WAI-SR vs CSQ-8 reward, each at K = 0 and 5 | 2.378 → 2.968 (Q1+Q2 reward, K=5, iter. 10); WAI-SR and CSQ-8: no significant gain |
+| **3 · this repo** | Llama-3.2-1B bf16; gpt-4o-mini + held-out claude-haiku-4-5; 8 candidates/turn; 10 iterations | K = 0 vs K = 5, 9 instruments, 2 judges | 3.000 → 4.260 (K=0), 3.003 → 4.307 (K=5) |
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="results/figures/history_dark.png">
+  <img alt="Evaluation score on the training reward by iteration for K=0 and K=5: generation 2 with Q1+Q2, WAI-SR and CSQ-8 reward oracles, and generation 3; a dagger marks the generation-2 iteration-6 evaluation, which was partly regenerated in a technical re-run" src="results/figures/history_light.png">
+</picture>
+
+- **With the Q1+Q2 reward, PTO beats the untrained base in generations 2 and 3.** In
+  generation 2, both Q1+Q2-reward arms already beat the base at iteration 5, the budget the
+  other oracles got (+0.39 for K=0, +0.52 for K=5, Holm p ≤ .003). The K=5 arm, continued to
+  iteration 10, gains +0.590 (d_z = 0.56) and also beats the base on all four non-reward
+  instruments (WAI-SR, CSQ-8, MI-SAT, MITI; Holm p ≤ .003).
+- **The choice of reward oracle matters (generation 2).** Training on WAI-SR or CSQ-8 did not
+  measurably improve even the instrument being optimized (+0.06 to +0.09), and no instrument
+  improved significantly after Holm correction (all p ≥ .097). These oracles gave both candidate
+  replies the same score at 31–73% of branch points, versus 5–10% for Q1+Q2, so fewer candidate
+  pairs differed by enough (more than τ = 0.1) to become training pairs: 46–59% of the Q1+Q2
+  count at K = 0 and 62–79% at K = 5. This fits the weak results but does not prove it caused
+  them.
+- **Look-ahead did not raise the training reward in generations 2 and 3.**
+  - *Generation 2:* no matched-iteration Q1+Q2 contrast survives Holm correction. Pooled over
+    iterations 1–5 for the Q1+Q2 reward, the gap is +0.060 (p = .14), but K=5 scored higher on
+    WAI-SR (+0.11, Holm p = .002) and MITI (+0.11, Holm p = .04).
+  - *Generation 3:* the two arms tie on the reward; K=5 shows less over-praise and
+    MI-inconsistent behaviour, but the held-out judge rates its MI integrity lower (see above).
+- **Caveats.** Each configuration was run once, and checkpoints were scored on the same 96
+  personas they were compared on, so the table avoids "best iteration" numbers. The
+  generation-2 iteration-6 point of the Q1+Q2-reward K=5 arm (†) was partly regenerated in a
+  technical re-run; no number above uses it. Details:
+  [`results/README.md`](results/README.md#earlier-generations).
 
 ## How it works
 
@@ -229,6 +271,9 @@ notebooks/          Colab notebook
 
 - **One run per configuration.** The K=0 vs K=5 comparison rests on a single seed each; the
   persona-paired tests capture conversation-level noise, not run-to-run variance.
+- **No held-out personas.** Every iteration is scored on the same 96 personas used to compare
+  checkpoints, so a "best iteration" would be optimistic; the README quotes final iterations or
+  checkpoint averages.
 - **Simulated patients.** Every patient is gpt-4o-mini following a persona prompt; real clients
   behave differently.
 - **LLM judges, no human evaluation.** Training and evaluation both rely on LLM judges. A second,
