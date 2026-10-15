@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Environments
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# Secrets / key files
+*.key
+*_key.txt
+*_KEY.txt
+*.pem
+secrets*.json
+credentials*.json
+
+# Training outputs
+runs/
+wandb/
+tb_logs/
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+
+# Notebooks
+.ipynb_checkpoints/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Agent tooling
+.claude/

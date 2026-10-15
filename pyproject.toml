@@ -1,0 +1,104 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "preference-tree-optimization"
+version = "1.0.0"
+description = "Preference Tree Optimization (PTO): self-improving goal-oriented dialogue agents trained with look-ahead preference trees and DPO."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Lior Baruch" }]
+keywords = [
+    "dpo",
+    "preference-optimization",
+    "llm",
+    "dialogue",
+    "self-improvement",
+    "motivational-interviewing",
+    "look-ahead",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# Core = config, prompts, CLI and the OpenAI-side plumbing, so the core install
+# (`pip install -e .`) stays light. Model training lives in the `train` extra;
+# `pto compare` and the Anthropic judge need the `eval` extra.
+dependencies = [
+    "numpy",
+    "pandas",
+    "pyyaml",
+    "openai>=2",
+    "tqdm",
+]
+
+# Tested with: torch 2.11, transformers 5.8.1, trl 1.4.0, peft 0.19.1, openai 2.36.0; the offline
+# test suite also passes with torch 2.14.1 (CPU), transformers 5.19.0, peft 0.21.2, openai 3.31.0.
+[project.optional-dependencies]
+train = [
+    "torch>=2.4",
+    "transformers>=5.8,<6",
+    "trl>=1.4,<1.5",  # trl 1.15 forces a Triton fused LM head in DPO; fails where Triton is absent
+    "peft>=0.19",
+    "accelerate>=1.0",
+    "datasets>=4.0",
+]
+eval = [
+    "scipy>=1.11",
+    "anthropic>=0.40",
+]
+tracking = [
+    "tensorboard",
+    "wandb",
+]
+quant = [
+    "bitsandbytes",
+]
+dev = [
+    "pytest>=8",
+    "ruff>=0.8",
+    "matplotlib>=3.8",
+    "tokenizers",
+]
+
+[project.scripts]
+pto = "pto.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Lior-Baruch/preference-tree-optimization"
+Paper = "https://arxiv.org/abs/2608.12062"
+Issues = "https://github.com/Lior-Baruch/preference-tree-optimization/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = [
+    "B905",   # zip() without strict=: ported code relies on plain zip semantics
+    "B008",   # function calls in argument defaults (dataclass field factories, argparse)
+    "UP007",  # keep Optional[...] where ported signatures use it
+    "UP045",  # same, for newer ruff versions
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pto"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

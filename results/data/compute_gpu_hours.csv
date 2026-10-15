@@ -1,0 +1,3 @@
+k,last_iter,n_iters,gen_h,build_h,train_h,total_gpu_h,median_step_s,n_imputed,gpu_h_per_iter,total_gpu_h_floor,build_share,train_share
+0,10,10,1.323,5.669,1.127,8.119,6.757,1,0.812,9.221,0.698,0.139
+5,10,10,1.370,16.797,1.514,19.681,6.894,2,1.968,21.083,0.853,0.077

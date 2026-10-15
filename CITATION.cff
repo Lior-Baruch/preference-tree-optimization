@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper below."
+title: "Preference Tree Optimization (PTO)"
+type: software
+authors:
+  - family-names: Baruch
+    given-names: Lior
+license: MIT
+version: 1.0.0
+repository-code: "https://github.com/Lior-Baruch/preference-tree-optimization"
+keywords:
+  - preference optimization
+  - DPO
+  - dialogue agents
+  - look-ahead
+  - motivational interviewing
+preferred-citation:
+  type: conference-paper
+  title: "Preference Tree Optimization: Enhancing Goal-Oriented Dialogue with Look-Ahead Simulations"
+  authors:
+    - family-names: Baruch
+      given-names: Lior
+    - family-names: Butman
+      given-names: Moshe
+    - family-names: Bar
+      given-names: Kfir
+    - family-names: Friedman
+      given-names: Doron
+  collection-title: "ICLR 2025 Workshop on Scaling Self-Improving Foundation Models without Human Supervision (SSI-FM)"
+  conference:
+    name: "ICLR 2025 Workshop on Scaling Self-Improving Foundation Models without Human Supervision (SSI-FM)"
+  year: 2025
+  url: "https://arxiv.org/abs/2608.12062"
+  identifiers:
+    - type: other
+      value: "arXiv:2608.12062"
+      description: "arXiv preprint"

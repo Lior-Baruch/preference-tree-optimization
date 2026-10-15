@@ -1,0 +1,14 @@
+window,iters,quantity,k0_sum,k5_sum,k5_over_k0,arithmetic
+iters 1-5 (matched),"1,2,3,4,5",oracle_calls_train,59991.000,59177.000,0.986,"59,177 / 59,991"
+iters 1-5 (matched),"1,2,3,4,5",oracle_input_Mchars,516.228,622.242,1.205,622.2 / 516.2
+iters 1-5 (matched),"1,2,3,4,5",patient_calls_total,9950.000,86114.000,8.655,"86,114 / 9,950"
+iters 1-5 (matched),"1,2,3,4,5",patient_calls_tail,0.000,76197.000,nan,"76,197 / 0"
+iters 1-5 (matched),"1,2,3,4,5",n_candidates,30040.000,28992.000,0.965,"28,992 / 30,040"
+iters 1-5 (matched),"1,2,3,4,5",total_api_calls,69941.000,145291.000,2.077,"145,291 / 69,941"
+all matched iters,"1,2,3,4,5,6,7,8,9,10",oracle_calls_train,99622.000,121806.000,1.223,"121,806 / 99,622"
+all matched iters,"1,2,3,4,5,6,7,8,9,10",oracle_input_Mchars,987.099,1849.163,1.873,"1,849.2 / 987.1"
+all matched iters,"1,2,3,4,5,6,7,8,9,10",patient_calls_total,17587.000,179634.000,10.214,"179,634 / 17,587"
+all matched iters,"1,2,3,4,5,6,7,8,9,10",patient_calls_tail,0.000,159788.000,nan,"159,788 / 0"
+all matched iters,"1,2,3,4,5,6,7,8,9,10",n_candidates,49920.000,60384.000,1.210,"60,384 / 49,920"
+all matched iters,"1,2,3,4,5,6,7,8,9,10",total_api_calls,117209.000,301440.000,2.572,"301,440 / 117,209"
+all K5 iters,"1,2,3,4,5,6,7,8,9,10",patient_calls_tail_per_candidate,0.000,2.646,nan,"159,788 / 60,384 candidates"

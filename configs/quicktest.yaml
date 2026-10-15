@@ -1,0 +1,43 @@
+# Quick smoke test of the full pipeline at tiny scale (minutes on one GPU, a few hundred cheap
+# API calls): 2 iterations x 4 conversations of up to 17 utterances (opening line + 16), M=3
+# branches, K=2 look-ahead, short completions, gradient accumulation 1. Same models as the
+# reported runs. Not meant to improve the policy, only to exercise generation, tree growth,
+# look-ahead, the oracle, DPO, checkpointing and resume end to end. Run with:
+#
+#   pto train --config configs/quicktest.yaml
+#
+# Keys not listed here take the defaults of configs/pto_k5.yaml.
+
+output_dir: runs/quicktest
+seed: 42
+
+loop:
+  num_iterations: 2
+  conversations_per_iteration: 4
+  conversation_length: 16
+  epochs_per_iteration: 2
+
+generation:
+  batch_size: 2
+
+lookahead:
+  k: 2
+
+tree:
+  mode: greedy
+  branches: 3
+  max_new_tokens: 64
+  min_conv_length: 12
+  trunk_target_len: 16
+
+dpo:
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 1
+  max_completion_length: 64
+
+logging:
+  report_to: [tensorboard]
+
+hub:
+  push: false

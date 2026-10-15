@@ -1,0 +1,98 @@
+# PTO with K=5 look-ahead: the configuration of the reported K=5 run.
+#
+# Llama-3.2-1B policy (LoRA), gpt-4o-mini as simulated patient and as Q1+Q2 oracle, greedy
+# preference trees with M=8 branches per therapist turn, tau=0.1, MCL=12, 96 conversations of up
+# to 50 utterances (opening line + 49) per iteration, 2 DPO epochs per iteration, 10 iterations.
+# Every value equals the package default; it is spelled out here as a reference. Run with:
+#
+#   pto train --config configs/pto_k5.yaml
+#
+# Needs OPENAI_API_KEY (patient + oracle) and HF_TOKEN (gated Llama weights). See
+# docs/configuration.md for every key and docs/reproducing.md for compute and API cost.
+
+run_name: null            # null -> pto_Q1Q2_Llama32-1B_K5_MCL12_M8_greedy
+output_dir: runs
+seed: 42
+
+models:
+  policy: meta-llama/Llama-3.2-1B
+  tokenizer: null         # null -> same as policy
+  patient: gpt-4o-mini-2024-07-18
+  oracle: gpt-4o-mini-2024-07-18
+  api_base_url: null      # any OpenAI-compatible endpoint; null -> api.openai.com
+  dtype: auto             # auto | bfloat16 | float16 | float32
+  load_in_4bit: false
+
+lora:
+  r: 16
+  alpha: 16
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, up_proj, down_proj, gate_proj]
+
+loop:
+  num_iterations: 10
+  conversations_per_iteration: 96
+  conversation_length: 49
+  epochs_per_iteration: 2
+
+generation:
+  batch_size: 64
+  therapist_temperature: 0.9
+  patient_temperature: 0.7
+  max_input_tokens: 2048
+  max_new_tokens: 200
+  patient_concurrency: 96
+  patient_max_retries: 3
+  patient_backoff_s: 1.0
+  max_retries_without_progress: 3
+  stop_strings: ["<|im_end|>", "<|im_start|>"]
+
+oracle:
+  questionnaires: [1, 2]  # Q1 + Q2
+  temperature: 0.0
+  max_retries: 3
+  timeout_s: 60
+  concurrency: 128
+
+lookahead:
+  k: 5
+  therapist_temperature: 0.9
+  patient_temperature: 0.7
+  max_new_tokens: 200
+  sub_batch_size: 128
+
+tree:
+  mode: greedy            # greedy | independent
+  branches: 8             # M
+  tau: 0.1
+  temperature: 1.2
+  max_new_tokens: 200
+  min_conv_length: 12     # MCL (must be even in greedy mode)
+  trunk_target_len: 49
+
+dpo:
+  learning_rate: 1.0e-5
+  beta: 0.1
+  loss_type: sigmoid
+  precompute_ref_log_probs: true
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 8
+  gradient_checkpointing: true
+  warmup_ratio: 0.01
+  eval_split: 0.05
+  max_prompt_length: 2048
+  max_completion_length: 200
+  bf16: auto              # auto -> true only on CUDA GPUs with bf16 support
+
+logging:
+  report_to: [tensorboard]  # add wandb to also log to Weights & Biases (WANDB_API_KEY)
+  logging_steps: 1
+  save_steps: 10
+  save_total_limit: 2
+  save_generations: true
+  save_lookahead_transcripts: true
+
+hub:
+  push: false
+  repo_id: null           # e.g. your-name/pto-llama32-1b; required when push is true
